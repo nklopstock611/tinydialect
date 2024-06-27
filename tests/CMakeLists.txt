@@ -12,7 +12,7 @@ set (MLIR_TUTORIAL_TEST_DEPENDS
     tinydialect
 )
 
-add_lit_testsuite(check-mlir-tutorial "Running the MLIR tutorial regression tests"
+add_lit_testsuite(check-tinydialect "Running the MLIR tinydialect regression tests"
     ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS ${MLIR_TUTORIAL_TEST_DEPENDS}
 )
