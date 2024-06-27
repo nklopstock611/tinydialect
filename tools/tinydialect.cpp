@@ -1,5 +1,6 @@
 #include "lib/Dialect/Tiny/TinyDialect.h"
 #include "mlir/InitAllDialects.h"
+#include "mlir/include/mlir/InitAllPasses.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 
 int main(int argc, char**argv) {
@@ -7,6 +8,7 @@ int main(int argc, char**argv) {
   registry.insert<mlir::tinydialect::tiny::TinyDialect>();
 
   mlir::registerAllDialects(registry);
+  mlir::registerAllPasses();
 
   return mlir::asMainReturnCode(
       mlir::MlirOptMain(argc, argv, "Tiny Dialect Pass Driver", registry));

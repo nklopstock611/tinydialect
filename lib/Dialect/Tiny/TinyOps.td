@@ -10,7 +10,7 @@ include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-class Tiny_BinOp<string mnemonic> : Op<Tiny_Dialect, mnemonic> {
+class Tiny_BinOp<string mnemonic> : Op<Tiny_Dialect, mnemonic, [Pure, ElementwiseMappable, SameOperandsAndResultType]> {
     let arguments = (ins Builtin_RankedTensor:$lhs, Builtin_RankedTensor:$rhs);
     let results = (outs Builtin_RankedTensor:$output);
     let assemblyFormat = "$lhs `,` $rhs attr-dict `:` `(` type($lhs) `,` type($rhs) `)` `->` type($output)";
