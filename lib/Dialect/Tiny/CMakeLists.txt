@@ -12,10 +12,6 @@ add_dependencies(mlir-headers MLIRTinyOpsIncGen)
 
 add_mlir_doc(TinyDialect TinyDialect Tiny/ -gen-dialect-doc)
 
-# set(LLVM_TARGET_DEFINITIONS TinyPatterns.td)
-# mlir_tablegen(PolyCanonicalize.cpp.inc -gen-rewriters)
-# add_public_tablegen_target(MLIRPolyCanonicalizationIncGen)
-
 add_mlir_dialect_library(MLIRTiny
     TinyDialect.cpp
     TinyOps.cpp
@@ -24,4 +20,11 @@ add_mlir_dialect_library(MLIRTiny
     ${PROJECT_SOURCE_DIR}/lib/Dialect/Tiny
 
     LINK_LIBS PUBLIC
+        MLIRIR
+        MLIRParser
+        MLIRTransformUtils
+        MLIRSupport
 )
+
+
+

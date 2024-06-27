@@ -6,6 +6,7 @@
 /*/CMakeUserPresets.json
 
 # Nested build directory
+/build*
 /new_build*
 
 # Visual Studio built-in CMake configuration

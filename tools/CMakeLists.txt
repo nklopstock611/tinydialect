@@ -3,12 +3,12 @@ get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 
 set (LIBS
     ${dialect_libs}
-#     ${conversion_libs}
+    ${conversion_libs}
 #     AffineFullUnroll
 #     MLIRNoisy
-#     MLIROptLib
+    MLIROptLib
 #     MLIRPass
-#     MLIRPoly
+    MLIRTiny
 #     MulToAdd
 #     NoisyPasses
 #     PolyToStandard

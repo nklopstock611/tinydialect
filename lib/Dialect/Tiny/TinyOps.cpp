@@ -1,9 +1,11 @@
+#include "lib/Dialect/Tiny/TinyOps.h"
+
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/IR/PatternMatch.h"
 
 // Required after PatternMatch.h
-#include "lib/Dialect/Poly/TinyCanonicalize.cpp.inc"
+// #include "lib/Dialect/Poly/TinyCanonicalize.cpp.inc"
 
 namespace mlir {
 namespace tinydialect {
