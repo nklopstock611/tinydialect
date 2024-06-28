@@ -1,6 +1,6 @@
 #include "lib/Dialect/Tiny/TinyDialect.h"
 #include "mlir/InitAllDialects.h"
-#include "mlir/include/mlir/InitAllPasses.h"
+#include "mlir/InitAllPasses.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 
 int main(int argc, char**argv) {

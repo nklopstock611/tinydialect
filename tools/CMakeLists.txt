@@ -15,7 +15,7 @@ set (LIBS
     ortools::ortools
 )
 
-add_llvm_executable(tinydialect tinydialect.cpp)
+add_llvm_executable(tinydialect tinydialect-opt.cpp)
 
 llvm_update_compile_flags(tinydialect)
 target_link_libraries(tinydialect PRIVATE ${LIBS})

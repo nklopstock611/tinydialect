@@ -13,7 +13,7 @@ def Tiny_Dialect : Dialect {
     let cppNamespace = "mlir::tinydialect::tiny";
 
     // let useDefaultTypePrinterParser  = 1;
-    // let hasConstantMaterializer = 1;
+    let hasConstantMaterializer = 1;
 }
 
 #endif  // LIB_DIALECT_TINY_TINYDIALECT_TD_
