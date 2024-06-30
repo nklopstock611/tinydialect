@@ -12,25 +12,157 @@ namespace mlir {
 namespace tinydialect {
 namespace tiny {
 
-#define GEN_PASS_DEF_POLYTOSTANDARD
+#define GEN_PASS_DEF_TINYTOSTANDARD
 #include "lib/Conversion/TinyToStandard/TinyToStandard.h.inc"
 
-// class TinyToStandardTypeConverter : public TypeConverter {
-//  public:
-//   TinyToStandardTypeConverter(MLIRContext *ctx) {
-//     addConversion([](Type type) { return type; });
-//     addConversion([ctx](TinynomialType type) -> Type {
-//       int degreeBound = type.getDegreeBound();
-//       IntegerType elementTy =
-//           IntegerType::get(ctx, 32, IntegerType::SignednessSemantics::Signless);
-//       return RankedTensorType::get({degreeBound}, elementTy);
-//     });
-//   }
-// };
+/*
+ * struct ConvertMulOp -> this should replace a tiny.add op to a loop that uses arith.add
+ * to add each pair of elements in the vectors.
+*/
+struct ConvertAdd : public OpConversionPattern<AddOp> {
+  ConvertAdd(mlir::MLIRContext *context) : OpConversionPattern<AddOp>(context) {}
 
-// struct ConvertAppOp
-// struct ConvertMulOp
-// struct ConvertConstant
+  LogicalResult matchAndRewrite(AddOp op, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+    llvm::errs() << "Lowering AddOp...\n";
+    auto tinyAddTensorType = mlir::dyn_cast<RankedTensorType>(adaptor.getLhs().getType());
+    // if (!tinyAddTensorType)
+    //   return rewriter.notifyMatchFailure(op, "expected ranked tensor type");
+
+    auto numTerms = tinyAddTensorType.getShape()[0];
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+
+    // creates an all-zeros tensor to store the resulting tensor
+    auto elementType = tinyAddTensorType.getElementType();
+    auto zeroTensor = b.create<arith::ConstantOp>(
+      tinyAddTensorType,
+      DenseElementsAttr::get(
+        tinyAddTensorType,
+        llvm::SmallVector<APInt, 8>(numTerms, APInt(elementType.getIntOrFloatBitWidth(), 0))
+      )
+    );
+
+    // llvm::errs() << "Zero Tensor: " << zeroTensor << "\n";
+
+    // creates constants for the loop
+    auto lowerBound = b.create<arith::ConstantOp>(b.getIndexType(), b.getIndexAttr(0));
+    auto numTermsOp = b.create<arith::ConstantOp>(b.getIndexType(), b.getIndexAttr(numTerms));
+    auto step = b.create<arith::ConstantOp>(b.getIndexType(), b.getIndexAttr(1));
+    
+    auto lhs = adaptor.getLhs();
+    auto rhs = adaptor.getRhs();
+
+    auto loop = b.create<scf::ForOp>(
+      lowerBound, numTermsOp, step, ValueRange(zeroTensor.getResult()),
+      [&](OpBuilder &builder, Location loc, Value index, ValueRange loopState) {
+        ImplicitLocOpBuilder b(op.getLoc(), builder);
+        auto accumTensor = loopState.front();
+
+        // extracts the elements from the input tensors
+        auto lhsElement = b.create<tensor::ExtractOp>(lhs, index);
+        auto rhsElement = b.create<tensor::ExtractOp>(rhs, index);
+
+        // adds the elements
+        auto sum = b.create<arith::AddIOp>(lhsElement, rhsElement);
+
+        // stores the result in the accumulator tensor
+        auto resultTensor = b.create<tensor::InsertOp>(sum, accumTensor, index);
+        // says that the result of the current iteration is the accumulator tensor for the next iteration
+        // makes the accumTensor for the next iteration the result of the current iteration (resultTensor)
+        // yields the accumulator tensor
+        b.create<scf::YieldOp>(resultTensor.getResult()); // stablishes resultTensor as the next accumTensor
+      } 
+    );
+
+    // llvm::errs() << "Converted AppOp: " << loop.getResult(0) << "\n";
+    rewriter.replaceOp(op, loop.getResult(0));
+    return success();
+  }
+};
+
+/*
+ * struct ConvertMulOp -> this should replace a tiny.mul op to a loop that uses arith.mul
+ * to multiply each pair of elements in the vectors.
+*/
+struct ConvertMul : public OpConversionPattern<MulOp> {
+  ConvertMul(mlir::MLIRContext *context) : OpConversionPattern<MulOp>(context) {}
+
+  LogicalResult matchAndRewrite(MulOp op, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+  auto tinyMulTensorType = mlir::dyn_cast<RankedTensorType>(adaptor.getLhs().getType());
+    // if (!tinyMulTensorType)
+    //   return rewriter.notifyMatchFailure(op, "expected ranked tensor type");
+
+    auto numTerms = tinyMulTensorType.getShape()[0];
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+
+    // creates an all-zeros tensor to store the resulting tensor
+    auto elementType = tinyMulTensorType.getElementType();
+    auto zeroTensor = b.create<arith::ConstantOp>(
+      tinyMulTensorType,
+        DenseElementsAttr::get(
+          tinyMulTensorType,
+          llvm::SmallVector<APInt, 8>(numTerms, APInt(elementType.getIntOrFloatBitWidth(), 0))
+      )
+    );
+
+    // creates constants for the loop
+    auto lowerBound = b.create<arith::ConstantOp>(b.getIndexType(), b.getIndexAttr(0));
+    auto numTermsOp = b.create<arith::ConstantOp>(b.getIndexType(), b.getIndexAttr(numTerms));
+    auto step = b.create<arith::ConstantOp>(b.getIndexType(), b.getIndexAttr(1));
+    
+    auto lhs = adaptor.getLhs();
+    auto rhs = adaptor.getRhs();
+
+    auto loop = b.create<scf::ForOp>(
+      lowerBound, numTermsOp, step, ValueRange(zeroTensor.getResult()),
+      [&](OpBuilder &builder, Location loc, Value index, ValueRange loopState) {
+        ImplicitLocOpBuilder b(op.getLoc(), builder);
+        auto accumTensor = loopState.front();
+
+        // extracts the elements from the input tensors
+        auto lhsElement = b.create<tensor::ExtractOp>(lhs, index);
+        auto rhsElement = b.create<tensor::ExtractOp>(rhs, index);
+
+        // adds the elements
+        auto sum = b.create<arith::MulIOp>(lhsElement, rhsElement);
+
+        // stores the result in the accumulator tensor
+        auto resultTensor = b.create<tensor::InsertOp>(sum, accumTensor, index);
+        // says that the result of the current iteration is the accumulator tensor for the next iteration
+        // makes the accumTensor for the next iteration the result of the current iteration (resultTensor)
+
+        // yields the accumulator tensor
+        b.create<scf::YieldOp>(resultTensor.getResult()); // stablishes resultTensor as the next accumTensor
+      } 
+    );
+
+    rewriter.replaceOp(op, loop.getResult(0));
+    return success();
+  }
+};
+
+struct ConvertConstant : public OpConversionPattern<ConstantOp> {
+  ConvertConstant(mlir::MLIRContext *context)
+      : OpConversionPattern<ConstantOp>(context) {}
+
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult matchAndRewrite(ConstantOp op, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+    llvm::errs() << "ConvertConstant\n";
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+
+    // get the atribute of the coefficients of the original operation -> arith.constant dense<[1, 2, 3]> -> atribute of coefficients dense<[1, 2, 3]>
+    auto valueAttr = adaptor.getCoefficients();
+
+    // creates a constant operation in the new dialect
+    auto constOp = b.create<arith::ConstantOp>(adaptor.getCoefficients());
+
+    // llvm::errs() << "Converted constant: " << constOp << "\n";
+
+    // replaces the original operation with the new constant operation
+    rewriter.replaceOp(op, constOp.getResult());
+
+    return success();
+  }
+};
 
 struct TinyToStandard : impl::TinyToStandardBase<TinyToStandard> {
   using TinyToStandardBase::TinyToStandardBase;
@@ -41,36 +173,43 @@ struct TinyToStandard : impl::TinyToStandardBase<TinyToStandard> {
 
     ConversionTarget target(*context);
     target.addLegalDialect<arith::ArithDialect>();
+    target.addLegalDialect<scf::SCFDialect>();
+    target.addLegalDialect<tensor::TensorDialect>();
     target.addIllegalDialect<TinyDialect>();
 
     RewritePatternSet patterns(context);
     // TinyToStandardTypeConverter typeConverter(context);
-    patterns.add<ConvertAdd, ConvertConstant, ConvertMul>(typeConverter, context);
+    // TypeConverter typeConverter;
+    // typeConverter, context
+    patterns.add<ConvertAdd, ConvertMul, ConvertConstant>(context);
 
-    populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
-        patterns, typeConverter);
-    target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
-      return typeConverter.isSignatureLegal(op.getFunctionType()) &&
-             typeConverter.isLegal(&op.getBody());
-    });
+    // is not necessary because the conversion does not need to change the type...
 
-    populateReturnOpTypeConversionPattern(patterns, typeConverter);
-    target.addDynamicallyLegalOp<func::ReturnOp>(
-        [&](func::ReturnOp op) { return typeConverter.isLegal(op); });
+    // populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
+    //     patterns, typeConverter);
+    // target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
+    //   return typeConverter.isSignatureLegal(op.getFunctionType()) &&
+    //          typeConverter.isLegal(&op.getBody());
+    // });
 
-    populateCallOpTypeConversionPattern(patterns, typeConverter);
-    target.addDynamicallyLegalOp<func::CallOp>(
-        [&](func::CallOp op) { return typeConverter.isLegal(op); });
+    // populateReturnOpTypeConversionPattern(patterns, typeConverter);
+    // target.addDynamicallyLegalOp<func::ReturnOp>(
+    //     [&](func::ReturnOp op) { return typeConverter.isLegal(op); });
 
-    populateBranchOpInterfaceTypeConversionPattern(patterns, typeConverter);
-    target.markUnknownOpDynamicallyLegal([&](Operation *op) {
-      return isNotBranchOpInterfaceOrReturnLikeOp(op) ||
-             isLegalForBranchOpInterfaceTypeConversionPattern(op,
-                                                              typeConverter) ||
-             isLegalForReturnOpTypeConversionPattern(op, typeConverter);
-    });
+    // populateCallOpTypeConversionPattern(patterns, typeConverter);
+    // target.addDynamicallyLegalOp<func::CallOp>(
+    //     [&](func::CallOp op) { return typeConverter.isLegal(op); });
+
+    // populateBranchOpInterfaceTypeConversionPattern(patterns, typeConverter);
+    // target.markUnknownOpDynamicallyLegal([&](Operation *op) {
+    //   return isNotBranchOpInterfaceOrReturnLikeOp(op) ||
+    //          isLegalForBranchOpInterfaceTypeConversionPattern(op,
+    //                                                           typeConverter) ||
+    //          isLegalForReturnOpTypeConversionPattern(op, typeConverter);
+    // });
 
     if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
+      llvm::errs() << "Conversion failed. TinyDialect operations still exist.\n";
       signalPassFailure();
     }
   }

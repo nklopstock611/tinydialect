@@ -12,7 +12,8 @@ def TinyToStandard : Pass<"tiny-to-standard"> {
 
     let dependentDialects = [
         "mlir::arith::ArithDialect",
-        "mlir::tinydialect::TinyDialect",
+        "mlir::tinydialect::tiny::TinyDialect",
+        "mlir::tensor::TensorDialect",
         "mlir::scf::SCFDialect",
     ];
 }

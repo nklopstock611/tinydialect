@@ -7,11 +7,11 @@ set (LIBS
 #     AffineFullUnroll
 #     MLIRNoisy
     MLIROptLib
-#     MLIRPass
+    MLIRPass
     MLIRTiny
 #     MulToAdd
 #     NoisyPasses
-#     PolyToStandard
+    TinyToStandard
     ortools::ortools
 )
 
