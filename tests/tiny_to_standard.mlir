@@ -23,9 +23,9 @@ func.func @test_lower_add(%arg0 : tensor<3xi32>, %arg1 : tensor<3xi32>) -> tenso
 // CHECK-LABEL: test_lower_add_and_fold
 func.func @test_lower_add_and_fold() {
   // CHECK: arith.constant dense<[1, 3, 5]> : tensor<3xi32>
-  %0 = arith.constant dense<[1, 3, 5]> : tensor<3xi32>
+  %0 = tiny.constant dense<[1, 3, 5]> : tensor<3xi32> : tensor<3xi32>
   // CHECK: arith.constant dense<[2, 4, 6]> : tensor<3xi32>
-  %1 = arith.constant dense<[2, 4, 6]> : tensor<3xi32>
+  %1 = tiny.constant dense<[2, 4, 6]> : tensor<3xi32> : tensor<3xi32>
   // like in the tutorial -> would be an arith.addi, but it was folded
   // CHECK: arith.constant
   %2 = tiny.add %0, %1: tensor<3xi32>
@@ -55,9 +55,9 @@ func.func @test_lower_mul(%arg0 : tensor<3xi32>, %arg1 : tensor<3xi32>) -> tenso
 // CHECK-LABEL: test_lower_mul_and_fold
 func.func @test_lower_mul_and_fold() {
   // CHECK: arith.constant dense<[1, 3, 5]> : tensor<3xi32>
-  %0 = arith.constant dense<[1, 3, 5]> : tensor<3xi32>
+  %0 = tiny.constant dense<[1, 3, 5]> : tensor<3xi32> : tensor<3xi32>
   // CHECK: arith.constant dense<[2, 4, 6]> : tensor<3xi32>
-  %1 = arith.constant dense<[2, 4, 6]> : tensor<3xi32>
+  %1 = tiny.constant dense<[2, 4, 6]> : tensor<3xi32> : tensor<3xi32>
   // like in the tutorial -> would be an arith.muli, but it was folded
   // CHECK: arith.constant
   %2 = tiny.mul %0, %1: tensor<3xi32>

@@ -3,13 +3,16 @@
 
 module {
   // CHECK-LABEL: test_op_syntax
-  func.func @test_op_syntax(%arg0: tensor<3xi32>, %arg1: tensor<3xi32>) -> tensor<3xi32> {
+  func.func @test_op_syntax(%arg0: tensor<3xi32>, %arg1: tensor<3xi32>) {
+    // CHECK tiny.constant
+    %0 = tiny.constant dense<[1, 2, 3]> : tensor<3xi32> : tensor<3xi32>
+    
     // CHECK: tiny.add
-    %0 = tiny.add %arg0, %arg1 : tensor<3xi32>
+    %1 = tiny.add %arg0, %arg1 : tensor<3xi32>
 
     // CHECK: tiny.mul
-    %1 = tiny.mul %arg0, %arg1 : tensor<3xi32>
+    %2 = tiny.mul %arg0, %arg1 : tensor<3xi32>
 
-    return %1 : tensor<3xi32>
+    return
   }
 }
