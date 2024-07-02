@@ -7,12 +7,12 @@
 // CHECK: %[[c0:.*]] = arith.constant 0 : index
 // CHECK: %[[c3:.*]] = arith.constant 3 : index
 // CHECK: %[[c1:.*]] = arith.constant 1 : index
-// CHECK: %[[loop:.*]] = scf.for %[[loop_iv:.*]] = %[[c0]] to %[[c3]] step %[[c1]] iter_args(%[[loop_iter_arg:.*]] = %[[cst]]) -> ([[T]]) {
+// CHECK: %[[loop:.*]] = affine.for %[[loop_iv:.*]] = %[[c0]] to %[[c3]] step %[[c1]] iter_args(%[[loop_iter_arg:.*]] = %[[cst]]) -> ([[T]]) {
 // CHECK-DAG: %[[p0_extracted:.*]] = tensor.extract %[[p0]][%[[loop_iv]]]
 // CHECK-DAG: %[[p1_extracted:.*]] = tensor.extract %[[p1]][%[[loop_iv]]]
 // CHECK: %[[add:.*]] = arith.addi %[[p0_extracted]], %[[p1_extracted]]
 // CHECK: %[[inserted:.*]] = tensor.insert %[[add]] into %[[loop_iter_arg]][%[[loop_iv]]]
-// CHECK: scf.yield %[[inserted]]
+// CHECK: affine.yield %[[inserted]]
 // CHECK: }
 // CHECK: return %[[loop]] : [[T]]
 func.func @test_lower_add(%arg0 : tensor<3xi32>, %arg1 : tensor<3xi32>) -> tensor<3xi32> {

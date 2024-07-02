@@ -4,13 +4,10 @@ get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 set (LIBS
     ${dialect_libs}
     ${conversion_libs}
-#     AffineFullUnroll
-#     MLIRNoisy
+    AffineFullUnroll
     MLIROptLib
     MLIRPass
     MLIRTiny
-#     MulToAdd
-#     NoisyPasses
     TinyToStandard
     ortools::ortools
 )

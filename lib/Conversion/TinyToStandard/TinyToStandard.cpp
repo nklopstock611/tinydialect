@@ -25,8 +25,6 @@ struct ConvertAdd : public OpConversionPattern<AddOp> {
   LogicalResult matchAndRewrite(AddOp op, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
     llvm::errs() << "Lowering AddOp...\n";
     auto tinyAddTensorType = mlir::dyn_cast<RankedTensorType>(adaptor.getLhs().getType());
-    // if (!tinyAddTensorType)
-    //   return rewriter.notifyMatchFailure(op, "expected ranked tensor type");
 
     auto numTerms = tinyAddTensorType.getShape()[0];
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
@@ -40,8 +38,6 @@ struct ConvertAdd : public OpConversionPattern<AddOp> {
         llvm::SmallVector<APInt, 8>(numTerms, APInt(elementType.getIntOrFloatBitWidth(), 0))
       )
     );
-
-    // llvm::errs() << "Zero Tensor: " << zeroTensor << "\n";
 
     // creates constants for the loop
     auto lowerBound = b.create<arith::ConstantOp>(b.getIndexType(), b.getIndexAttr(0));
@@ -68,12 +64,12 @@ struct ConvertAdd : public OpConversionPattern<AddOp> {
         auto resultTensor = b.create<tensor::InsertOp>(sum, accumTensor, index);
         // says that the result of the current iteration is the accumulator tensor for the next iteration
         // makes the accumTensor for the next iteration the result of the current iteration (resultTensor)
+
         // yields the accumulator tensor
         b.create<scf::YieldOp>(resultTensor.getResult()); // stablishes resultTensor as the next accumTensor
       } 
     );
 
-    // llvm::errs() << "Converted AppOp: " << loop.getResult(0) << "\n";
     rewriter.replaceOp(op, loop.getResult(0));
     return success();
   }
@@ -88,8 +84,6 @@ struct ConvertMul : public OpConversionPattern<MulOp> {
 
   LogicalResult matchAndRewrite(MulOp op, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
   auto tinyMulTensorType = mlir::dyn_cast<RankedTensorType>(adaptor.getLhs().getType());
-    // if (!tinyMulTensorType)
-    //   return rewriter.notifyMatchFailure(op, "expected ranked tensor type");
 
     auto numTerms = tinyMulTensorType.getShape()[0];
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
@@ -131,7 +125,7 @@ struct ConvertMul : public OpConversionPattern<MulOp> {
         // makes the accumTensor for the next iteration the result of the current iteration (resultTensor)
 
         // yields the accumulator tensor
-        b.create<scf::YieldOp>(resultTensor.getResult()); // stablishes resultTensor as the next accumTensor
+        b.create<scf::YieldOp>(resultTensor.getResult()); // establishes resultTensor as the next accumTensor
       } 
     );
 
@@ -155,8 +149,6 @@ struct ConvertConstant : public OpConversionPattern<ConstantOp> {
     // creates a constant operation in the new dialect
     auto constOp = b.create<arith::ConstantOp>(adaptor.getCoefficients());
 
-    // llvm::errs() << "Converted constant: " << constOp << "\n";
-
     // replaces the original operation with the new constant operation
     rewriter.replaceOp(op, constOp.getResult());
 
@@ -172,41 +164,14 @@ struct TinyToStandard : impl::TinyToStandardBase<TinyToStandard> {
     auto *module = getOperation();
 
     ConversionTarget target(*context);
+    // i'm not sure if it's the best practice to but thhis here like this...
     target.addLegalDialect<arith::ArithDialect>();
     target.addLegalDialect<scf::SCFDialect>();
     target.addLegalDialect<tensor::TensorDialect>();
     target.addIllegalDialect<TinyDialect>();
 
     RewritePatternSet patterns(context);
-    // TinyToStandardTypeConverter typeConverter(context);
-    // TypeConverter typeConverter;
-    // typeConverter, context
     patterns.add<ConvertAdd, ConvertMul, ConvertConstant>(context);
-
-    // is not necessary because the conversion does not need to change the type...
-
-    // populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
-    //     patterns, typeConverter);
-    // target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
-    //   return typeConverter.isSignatureLegal(op.getFunctionType()) &&
-    //          typeConverter.isLegal(&op.getBody());
-    // });
-
-    // populateReturnOpTypeConversionPattern(patterns, typeConverter);
-    // target.addDynamicallyLegalOp<func::ReturnOp>(
-    //     [&](func::ReturnOp op) { return typeConverter.isLegal(op); });
-
-    // populateCallOpTypeConversionPattern(patterns, typeConverter);
-    // target.addDynamicallyLegalOp<func::CallOp>(
-    //     [&](func::CallOp op) { return typeConverter.isLegal(op); });
-
-    // populateBranchOpInterfaceTypeConversionPattern(patterns, typeConverter);
-    // target.markUnknownOpDynamicallyLegal([&](Operation *op) {
-    //   return isNotBranchOpInterfaceOrReturnLikeOp(op) ||
-    //          isLegalForBranchOpInterfaceTypeConversionPattern(op,
-    //                                                           typeConverter) ||
-    //          isLegalForReturnOpTypeConversionPattern(op, typeConverter);
-    // });
 
     if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
       llvm::errs() << "Conversion failed. TinyDialect operations still exist.\n";
